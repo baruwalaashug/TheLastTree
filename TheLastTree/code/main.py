@@ -1,6 +1,7 @@
 #imports
 import pygame
 from zombie_1 import Zombie
+from player import Player
 
 pygame.init()
 
@@ -21,6 +22,7 @@ tree_rect = tree_image.get_rect(center = (window_width / 2, window_height / 3))
 character_image = pygame.image.load("assets/character/Idle/idle_down.png").convert_alpha()
 all_sprite = pygame.sprite.Group()
 zombie1 = Zombie(all_sprite, window_width, window_height, character_image, tree_rect)
+player = Player(all_sprite, window_width, window_height, character_image)
 
 #game loop
 while running:
