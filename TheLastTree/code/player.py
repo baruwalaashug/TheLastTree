@@ -1,7 +1,7 @@
 import pygame
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, groups, window_width, window_height, sprite_sheets, barriers):
+    def __init__(self, groups, window_width, window_height, sprite_sheets, barriers, zombies):
         super().__init__(groups)
 
         self.frame_width = 48
@@ -16,6 +16,7 @@ class Player(pygame.sprite.Sprite):
         self.current_frame = 0
         self.direction = "down"
         self.barriers = barriers
+        self.zombies = zombies
 
         self.animations = {
             direction: self.load_frames(sheet)
@@ -77,11 +78,20 @@ class Player(pygame.sprite.Sprite):
 
         self.image = self.frames[self.current_frame]
 
-        # Clamp to screen
         screen_width = pygame.display.get_surface().get_width()
         screen_height = pygame.display.get_surface().get_height()
         self.rect.clamp_ip(pygame.Rect(0, 0, screen_width, screen_height))
 
-        # Revert if colliding with barrier
         if pygame.sprite.spritecollideany(self, self.barriers):
             self.rect = prev_rect
+
+        # Player attack on left click
+        mouse_buttons = pygame.mouse.get_pressed()
+        if mouse_buttons[0]:  # Left mouse button
+            attack_range = 80
+            attack_damage = 10
+            for zombie in self.zombies:
+                dx = self.rect.centerx - zombie.rect.centerx
+                dy = self.rect.centery - zombie.rect.centery
+                if abs(dx) <= attack_range and abs(dy) <= attack_range:
+                    zombie.take_damage(attack_damage)

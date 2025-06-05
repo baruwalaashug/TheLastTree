@@ -2,14 +2,15 @@ import pygame
 import math
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self, groups, window_width, window_height, sprite_sheet, target, barriers):
+    def __init__(self, groups, position, sprite_sheet, target_rect, barriers, is_boss=False):
         super().__init__(groups)
 
         self.frame_width = 48
         self.frame_height = 64
-        self.scale = 2
+        self.scale = 2.5 if is_boss else 2
         self.colorkey = (0, 0, 0)
-        self.speed = 60
+        self.speed = 40 if is_boss else 60
+        self.hp = 50 if is_boss else 20
         self.animation_time = 150
         self.last_update = pygame.time.get_ticks()
         self.current_frame = 0
@@ -17,8 +18,8 @@ class Zombie(pygame.sprite.Sprite):
 
         self.frames = self.load_frames(sprite_sheet)
         self.image = self.frames[self.current_frame]
-        self.rect = self.image.get_rect(midbottom=(window_width / 2, window_height))
-        self.target = target.center
+        self.rect = self.image.get_rect(center=position)
+        self.target = target_rect.center
 
     def load_frames(self, sprite_sheet):
         sheet_width, _ = sprite_sheet.get_size()
@@ -59,6 +60,10 @@ class Zombie(pygame.sprite.Sprite):
             self.image = self.frames[self.current_frame]
             self.last_update = now
 
-        # Revert movement if colliding with barrier
         if pygame.sprite.spritecollideany(self, self.barriers):
             self.rect = prev_rect
+
+    def take_damage(self, amount):
+        self.hp -= amount
+        if self.hp <= 0:
+            self.kill()
