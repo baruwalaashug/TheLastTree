@@ -67,14 +67,14 @@ countdown_active = False
 
 def get_spawn_position_for_wave(wave, window_width, window_height):
     margin = 50
-    if wave == 1:
-        return (window_width // 2, window_height + margin)
-    elif wave == 2:
-        return (-margin, window_height // 2)
-    elif wave == 3:
-        return (window_width + margin, window_height // 2)
-    elif wave == 4:
-        return (window_width // 2, -margin)
+    if wave == 1:  # from bottom
+        return (random.randint(0, window_width), window_height + margin)
+    elif wave == 2:  # from left
+        return (-margin, random.randint(0, window_height))
+    elif wave == 3:  # from right
+        return (window_width + margin, random.randint(0, window_height))
+    elif wave == 4:  # from top
+        return (random.randint(0, window_width), -margin)
     else:
         side = random.choice(["top", "bottom", "left", "right"])
         if side == "top":
