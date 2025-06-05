@@ -1,50 +1,87 @@
 import pygame
-import math
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, groups, window_width, window_height, sprite_sheet):
+    def __init__(self, groups, window_width, window_height, sprite_sheets, barriers):
         super().__init__(groups)
 
-        self.frames = []
-        self.load_frames(sprite_sheet)
-        self.current_frame = 0
-        self.animation_distance_threshold = 10  # pixels before advancing frame
-        self.distance_moved = 0
+        self.frame_width = 48
+        self.frame_height = 64
+        self.scale = 1.5
+        self.colorkey = (0, 0, 0)
 
+        self.animation_time = 100
+        self.speed = 200
+
+        self.last_update = pygame.time.get_ticks()
+        self.current_frame = 0
+        self.direction = "down"
+        self.barriers = barriers
+
+        self.animations = {
+            direction: self.load_frames(sheet)
+            for direction, sheet in sprite_sheets.items()
+        }
+
+        self.frames = self.animations[self.direction]
         self.image = self.frames[self.current_frame]
         self.rect = self.image.get_rect(center=(window_width / 2, window_height / 2))
 
-        self.speed = 200  # pixels per second
-        self.last_pos = pygame.math.Vector2(self.rect.x, self.rect.y)
-
     def load_frames(self, sprite_sheet):
-        def get_image(sheet, frame, width, height, scale, colour):
-            image = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
-            image.blit(sheet, (0, 0), ((frame * width), 0, width, height))
-            image = pygame.transform.scale(image, (width * scale, height * scale))
-            image.set_colorkey(colour)
-            return image
+        sheet_width, _ = sprite_sheet.get_size()
+        num_frames = sheet_width // self.frame_width
+        frames = []
 
-        BLACK = (0, 0, 0)
-        for i in range(8):
-            self.frames.append(get_image(sprite_sheet, i, 45, 45, 1, BLACK))
+        for i in range(num_frames):
+            frame = pygame.Surface((self.frame_width, self.frame_height), pygame.SRCALPHA).convert_alpha()
+            frame.blit(sprite_sheet, (0, 0), (i * self.frame_width, 0, self.frame_width, self.frame_height))
+            frame = pygame.transform.scale(
+                frame, (self.frame_width * self.scale, self.frame_height * self.scale)
+            )
+            frame.set_colorkey(self.colorkey)
+            frames.append(frame)
+
+        return frames
+
+    def get_direction(self, dx, dy):
+        if dx == 0 and dy < 0: return "up"
+        if dx == 0 and dy > 0: return "down"
+        if dx < 0 and dy < 0: return "left_up"
+        if dx < 0 and dy > 0: return "left_down"
+        if dx > 0 and dy < 0: return "right_up"
+        if dx > 0 and dy > 0: return "right_down"
+        if dx < 0: return "left_down"
+        if dx > 0: return "right_down"
+        return self.direction
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
-        move_x = (keys[pygame.K_d] - keys[pygame.K_a]) * self.speed * dt
-        move_y = (keys[pygame.K_s] - keys[pygame.K_w]) * self.speed * dt
+        dx = keys[pygame.K_d] - keys[pygame.K_a]
+        dy = keys[pygame.K_s] - keys[pygame.K_w]
 
+        move_x = dx * self.speed * dt
+        move_y = dy * self.speed * dt
+
+        prev_rect = self.rect.copy()
         self.rect.x += move_x
         self.rect.y += move_y
 
-        current_pos = pygame.math.Vector2(self.rect.x, self.rect.y)
-        moved = current_pos.distance_to(self.last_pos)
-        self.distance_moved += moved
-        self.last_pos = current_pos
+        if dx != 0 or dy != 0:
+            self.direction = self.get_direction(dx, dy)
+            self.frames = self.animations[self.direction]
+            now = pygame.time.get_ticks()
+            if now - self.last_update > self.animation_time:
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.last_update = now
+        else:
+            self.current_frame = 0
 
-        if self.distance_moved >= self.animation_distance_threshold:
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
-            self.image = self.frames[self.current_frame]
-            self.distance_moved = 0
-        elif moved == 0:
-            self.image = self.frames[0]
+        self.image = self.frames[self.current_frame]
+
+        # Clamp to screen
+        screen_width = pygame.display.get_surface().get_width()
+        screen_height = pygame.display.get_surface().get_height()
+        self.rect.clamp_ip(pygame.Rect(0, 0, screen_width, screen_height))
+
+        # Revert if colliding with barrier
+        if pygame.sprite.spritecollideany(self, self.barriers):
+            self.rect = prev_rect
