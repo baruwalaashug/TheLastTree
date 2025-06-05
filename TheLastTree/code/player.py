@@ -1,7 +1,7 @@
 import pygame
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, groups, window_width, window_height, sprite_sheets, barriers, zombies):
+    def __init__(self, groups, window_width, window_height, sprite_sheets, idle_sheets, barriers, zombies):
         super().__init__(groups)
 
         self.frame_width = 48
@@ -17,10 +17,16 @@ class Player(pygame.sprite.Sprite):
         self.direction = "down"
         self.barriers = barriers
         self.zombies = zombies
+        self.can_attack = True
 
         self.animations = {
             direction: self.load_frames(sheet)
             for direction, sheet in sprite_sheets.items()
+        }
+
+        self.idle_animations = {
+            direction: self.load_frames(sheet)
+            for direction, sheet in idle_sheets.items()
         }
 
         self.frames = self.animations[self.direction]
@@ -66,15 +72,19 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += move_x
         self.rect.y += move_y
 
+        now = pygame.time.get_ticks()
+
         if dx != 0 or dy != 0:
             self.direction = self.get_direction(dx, dy)
             self.frames = self.animations[self.direction]
-            now = pygame.time.get_ticks()
             if now - self.last_update > self.animation_time:
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.last_update = now
         else:
-            self.current_frame = 0
+            self.frames = self.idle_animations[self.direction]
+            if now - self.last_update > self.animation_time:
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.last_update = now
 
         self.image = self.frames[self.current_frame]
 
@@ -85,13 +95,17 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, self.barriers):
             self.rect = prev_rect
 
-        # Player attack on left click
+        # One attack per click
         mouse_buttons = pygame.mouse.get_pressed()
-        if mouse_buttons[0]:  # Left mouse button
-            attack_range = 80
-            attack_damage = 10
-            for zombie in self.zombies:
-                dx = self.rect.centerx - zombie.rect.centerx
-                dy = self.rect.centery - zombie.rect.centery
-                if abs(dx) <= attack_range and abs(dy) <= attack_range:
-                    zombie.take_damage(attack_damage)
+        if mouse_buttons[0]:
+            if self.can_attack:
+                self.can_attack = False
+                attack_range = 80
+                attack_damage = 10
+                for zombie in self.zombies:
+                    dx = self.rect.centerx - zombie.rect.centerx
+                    dy = self.rect.centery - zombie.rect.centery
+                    if abs(dx) <= attack_range and abs(dy) <= attack_range:
+                        zombie.take_damage(attack_damage)
+        else:
+            self.can_attack = True

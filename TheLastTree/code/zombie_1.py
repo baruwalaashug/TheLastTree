@@ -10,7 +10,7 @@ class Zombie(pygame.sprite.Sprite):
         self.scale = 2.5 if is_boss else 2
         self.colorkey = (0, 0, 0)
         self.speed = 40 if is_boss else 60
-        self.hp = 50 if is_boss else 20
+        self.hp = 100 if is_boss else 30  # ✅ Boss has more HP
         self.animation_time = 150
         self.last_update = pygame.time.get_ticks()
         self.current_frame = 0
